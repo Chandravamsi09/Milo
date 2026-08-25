@@ -32,7 +32,10 @@ class MiloApplication {
   private playerVel: Vector2D = new Vector2D(0, 0);
   private playerHp: number = 100;
   private playerMp: number = 100;
-  private speed: number = 4;
+  private speed: number = 4.5;
+
+  private crystalsCollected: number = 0;
+  private totalCrystals: number = 3;
 
   private enemies: Enemy[] = [];
   private particles: Particle[] = [];
@@ -62,15 +65,16 @@ class MiloApplication {
     const cols = Math.ceil(this.canvas.width / this.tileSize);
     const rows = Math.ceil(this.canvas.height / this.tileSize);
     this.dungeonMap = [];
+    this.crystalsCollected = 0;
 
     for (let r = 0; r < rows; r++) {
       const row: number[] = [];
       for (let c = 0; c < cols; c++) {
         if (r === 0 || r === rows - 1 || c === 0 || c === cols - 1) {
           row.push(1); // Border wall
-        } else if (Math.random() < 0.12 && (c > 3 || r > 3)) {
+        } else if (Math.random() < 0.10 && (c > 3 || r > 3)) {
           row.push(1); // Obstacle wall
-        } else if (Math.random() < 0.03) {
+        } else if (Math.random() < 0.035) {
           row.push(2); // Crystal Treasure
         } else {
           row.push(0); // Open floor
@@ -78,6 +82,7 @@ class MiloApplication {
       }
       this.dungeonMap.push(row);
     }
+    this.updateQuestTrackerDOM();
   }
 
   private bindEvents(): void {
@@ -138,7 +143,7 @@ class MiloApplication {
 
   private generateDungeon(): void {
     this.generateDungeonMap();
-    this.log("🎲 Regenerated 32x32 Cellular Automata Dungeon Map with Treasures & Wall Obstacles.");
+    this.log("🎲 Regenerated Cellular Automata Dungeon Map with Blue Crystals & Obstacles.");
     if (!this.isRunning) this.render();
   }
 
@@ -190,6 +195,29 @@ class MiloApplication {
     this.playerPos.x = Math.max(30, Math.min(this.canvas.width - 30, this.playerPos.x));
     this.playerPos.y = Math.max(30, Math.min(this.canvas.height - 30, this.playerPos.y));
 
+    // Crystal Collection Check (Hero touching blue crystals)
+    for (let r = 0; r < this.dungeonMap.length; r++) {
+      for (let c = 0; c < this.dungeonMap[r].length; c++) {
+        if (this.dungeonMap[r][c] === 2) {
+          const crystalX = c * this.tileSize + 20;
+          const crystalY = r * this.tileSize + 20;
+          const dist = Math.hypot(this.playerPos.x - crystalX, this.playerPos.y - crystalY);
+
+          if (dist <= 26) {
+            // Collect crystal!
+            this.dungeonMap[r][c] = 0; // Clear tile
+            this.crystalsCollected++;
+            this.playerMp = Math.min(100, this.playerMp + 25);
+            this.playerHp = Math.min(100, this.playerHp + 10);
+            this.updateHUD();
+            this.spawnSpellBurst(crystalX, crystalY, '#38bdf8');
+            this.log(`💎 Collected Elemental Crystal! (${this.crystalsCollected}/${this.totalCrystals}) +25 MP`, 'success');
+            this.updateQuestTrackerDOM();
+          }
+        }
+      }
+    }
+
     // Update enemy orbits
     this.enemies.forEach(e => {
       e.angle += e.speed;
@@ -218,6 +246,18 @@ class MiloApplication {
     if (entEl) entEl.innerText = (142 + this.particles.length).toString();
   }
 
+  private updateQuestTrackerDOM(): void {
+    const qTitle = document.getElementById('quest-title');
+    const qDesc = document.getElementById('quest-desc');
+    if (this.crystalsCollected >= this.totalCrystals) {
+      if (qTitle) qTitle.innerText = "🎉 Quest Completed!";
+      if (qDesc) qDesc.innerText = `All ${this.totalCrystals} Crystals collected! Now defeat the Guardian Boss!`;
+    } else {
+      if (qTitle) qTitle.innerText = "Explore the Ancient Ruins of Milo";
+      if (qDesc) qDesc.innerText = `Find & collect blue elemental crystals (${this.crystalsCollected}/${this.totalCrystals}).`;
+    }
+  }
+
   private updateHUD(): void {
     const hpFill = document.getElementById('hp-fill');
     const mpFill = document.getElementById('mp-fill');
@@ -229,6 +269,8 @@ class MiloApplication {
     // Canvas Background
     this.ctx.fillStyle = '#0f172a';
     this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+
+    const pulse = (Math.sin(Date.now() * 0.005) + 1) * 0.5;
 
     // Draw Dungeon Map Grid & Walls
     for (let r = 0; r < this.dungeonMap.length; r++) {
@@ -244,10 +286,20 @@ class MiloApplication {
           this.ctx.strokeStyle = '#334155';
           this.ctx.strokeRect(tx, ty, this.tileSize - 1, this.tileSize - 1);
         } else if (tile === 2) {
-          // Crystal Treasure Tile
+          // Glowing Blue Crystal Treasure Tile
+          const glowRadius = 7 + pulse * 4;
           this.ctx.fillStyle = '#38bdf8';
+          this.ctx.shadowColor = '#38bdf8';
+          this.ctx.shadowBlur = 12 + pulse * 8;
           this.ctx.beginPath();
-          this.ctx.arc(tx + 20, ty + 20, 6, 0, Math.PI * 2);
+          this.ctx.arc(tx + 20, ty + 20, glowRadius, 0, Math.PI * 2);
+          this.ctx.fill();
+          this.ctx.shadowBlur = 0;
+
+          // Crystal Inner Core
+          this.ctx.fillStyle = '#ffffff';
+          this.ctx.beginPath();
+          this.ctx.arc(tx + 20, ty + 20, 3, 0, Math.PI * 2);
           this.ctx.fill();
         } else {
           // Floor Grid Lines
