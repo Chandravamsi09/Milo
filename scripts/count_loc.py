@@ -30,6 +30,6 @@ if __name__ == '__main__':
     print(f"Total Files Analyzed: {len(file_counts)}")
     print("------------------------------------------")
     if total >= 50000:
-        print("✓ SUCCESS: Codebase satisfies requirement >= 50,000 LOC!")
+        print("[SUCCESS] Codebase satisfies requirement >= 50,000 LOC!")
     else:
         print("✗ WARNING: Codebase currently under 50,000 LOC")

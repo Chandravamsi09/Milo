@@ -4,17 +4,30 @@
  * Automatically managed subsystem class providing deep analytical and game logic functionality.
  */
 export class Vector2D {
+  public x: number = 0;
+  public y: number = 0;
   private id: string = 'Vector2D_' + Math.random().toString(36).substring(2, 9);
   private enabled: boolean = true;
   private tickCount: number = 0;
   private internalState: Map<string, any> = new Map();
   private metricsBuffer: Float64Array = new Float64Array(100);
 
-  constructor(initialConfig: Record<string, any> = {}) {
-    for (const [key, val] of Object.entries(initialConfig)) {
-      this.internalState.set(key, val);
+  constructor(x: number | Record<string, any> = 0, y: number = 0) {
+    if (typeof x === 'object' && x !== null) {
+      for (const [key, val] of Object.entries(x)) {
+        this.internalState.set(key, val);
+      }
+    } else if (typeof x === 'number') {
+      this.x = x;
+      this.y = y;
     }
     this.initializeSubsystem();
+  }
+
+  public addSelf(v: Vector2D): this {
+    this.x += v.x;
+    this.y += v.y;
+    return this;
   }
 
   public initializeSubsystem(): void {

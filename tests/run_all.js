@@ -16,8 +16,7 @@ try {
   testSaveLoadSystem();
   testInventoryCrafting();
   testQuestEngine();
-  console.log("
-ALL 6 TEST SUITES PASSED CLEANLY! (100% PASS RATE)");
+  console.log("\nALL 6 TEST SUITES PASSED CLEANLY! (100% PASS RATE)");
 } catch (err) {
   console.error("Test failure:", err);
   process.exit(1);
