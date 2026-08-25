@@ -98,6 +98,7 @@ class MiloApplication {
   private spell2Cooldown: number = 0;
   private spell3Cooldown: number = 0;
   private spell4Cooldown: number = 0;
+  private spell5Cooldown: number = 0;
 
   // Quest & Wave Progression
   private crystalsCollected: number = 0;
@@ -173,7 +174,7 @@ class MiloApplication {
     } catch (e) {}
   }
 
-  private playSfx(type: 'bolt' | 'fire' | 'lightning' | 'ultimate' | 'dash' | 'hit' | 'crystal' | 'boss' | 'hover' | 'click' | 'start'): void {
+  private playSfx(type: 'bolt' | 'fire' | 'lightning' | 'ultimate' | 'dash' | 'hit' | 'crystal' | 'boss' | 'hover' | 'click' | 'start' | 'heal'): void {
     switch (type) {
       case 'hover': this.playTone(440, 'sine', 0.05, 0.08); break;
       case 'click': this.playTone(660, 'sine', 0.08, 0.12); break;
@@ -186,6 +187,7 @@ class MiloApplication {
       case 'hit': this.playTone(150, 'square', 0.08, 0.15); break;
       case 'crystal': this.playTone(950, 'sine', 0.4, 0.2); break;
       case 'boss': this.playTone(80, 'sawtooth', 0.8, 0.25); break;
+      case 'heal': this.playTone(640, 'sine', 0.35, 0.2); break;
     }
   }
 
@@ -503,9 +505,18 @@ class MiloApplication {
         if (e.key === '2') this.castSpell2();
         if (e.key === '3') this.castSpell3();
         if (e.key === '4') this.castSpell4();
+        if (e.key === '5') this.castSpell5();
+        if (['e', 'E'].includes(e.key)) this.log("🔍 Milo inspected surrounding ancient ruins.", 'info');
         if (e.key === ' ') this.castSpell1();
       }
     });
+
+    document.getElementById('card-dash')?.addEventListener('click', () => this.executeDash());
+    document.getElementById('card-spell1')?.addEventListener('click', () => this.castSpell1());
+    document.getElementById('card-spell2')?.addEventListener('click', () => this.castSpell2());
+    document.getElementById('card-spell3')?.addEventListener('click', () => this.castSpell3());
+    document.getElementById('card-spell4')?.addEventListener('click', () => this.castSpell4());
+    document.getElementById('card-spell5')?.addEventListener('click', () => this.castSpell5());
 
     window.addEventListener('keyup', (e) => {
       if (this.currentScene === 'GAMEPLAY') {
@@ -750,6 +761,51 @@ class MiloApplication {
     this.log("💥 ULTIMATE ENERGY EXPLOSION UNLEASHED! (-60 MP)", 'success');
   }
 
+  private castSpell5(): void {
+    if (this.playerHp >= this.playerMaxHp) {
+      this.log("⚠️ Milo is already at full HP!", 'info');
+      return;
+    }
+    if (this.spell5Cooldown > 0) return;
+    if (!this.consumeMp(35)) return;
+
+    this.spell5Cooldown = 360; // 6.0s CD
+    this.spellsCast++;
+    this.playSfx('heal');
+
+    const healAmount = 30;
+    this.playerHp = Math.min(this.playerMaxHp, this.playerHp + healAmount);
+    this.updateHUD();
+
+    this.floatingTexts.push({
+      x: this.playerPos.x,
+      y: this.playerPos.y - 20,
+      text: `+${healAmount} HP`,
+      color: '#34d399',
+      opacity: 1.0,
+      vy: -1.5,
+      life: 0,
+      maxLife: 35
+    });
+
+    for (let i = 0; i < 20; i++) {
+      const angle = (Math.PI * 2 * i) / 20;
+      const spd = 1.5 + Math.random() * 2.5;
+      this.particles.push({
+        x: this.playerPos.x,
+        y: this.playerPos.y,
+        vx: Math.cos(angle) * spd,
+        vy: Math.sin(angle) * spd - 1,
+        life: 0,
+        maxLife: 25,
+        color: '#34d399',
+        size: 4
+      });
+    }
+
+    this.log(`💚 Cast Heal Ability! (+${healAmount} HP restored) (-35 MP)`, 'success');
+  }
+
   private spawnSpellBurst(x: number, y: number, color: string): void {
     for (let i = 0; i < 24; i++) {
       const angle = (Math.PI * 2 * i) / 24;
@@ -853,6 +909,7 @@ class MiloApplication {
     if (this.spell2Cooldown > 0) this.spell2Cooldown--;
     if (this.spell3Cooldown > 0) this.spell3Cooldown--;
     if (this.spell4Cooldown > 0) this.spell4Cooldown--;
+    if (this.spell5Cooldown > 0) this.spell5Cooldown--;
     if (this.dashCooldown > 0) this.dashCooldown--;
     if (this.iFrameTimer > 0) this.iFrameTimer--;
 
@@ -1210,6 +1267,7 @@ class MiloApplication {
     this.updateCDOverlay('cd-spell2', 'card-spell2', this.spell2Cooldown, 90, 25);
     this.updateCDOverlay('cd-spell3', 'card-spell3', this.spell3Cooldown, 180, 40);
     this.updateCDOverlay('cd-spell4', 'card-spell4', this.spell4Cooldown, 480, 60);
+    this.updateCDOverlay('cd-spell5', 'card-spell5', this.spell5Cooldown, 360, 35);
   }
 
   private updateCDOverlay(cdId: string, cardId: string, cd: number, maxCd: number, mpCost: number): void {

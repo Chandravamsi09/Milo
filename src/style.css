@@ -212,6 +212,7 @@ html, body {
 .ability-card { position: relative; width: 60px; height: 64px; background: rgba(15, 23, 42, 0.9); border: 1.5px solid var(--border-color); border-radius: 8px; display: flex; flex-direction: column; align-items: center; justify-content: center; transition: all 0.2s ease; cursor: pointer; user-select: none; }
 .ability-card:hover { border-color: var(--accent-blue); transform: translateY(-2px); }
 .ultimate-card { border-color: var(--accent-gold); }
+.heal-card { border-color: var(--accent-green); }
 .key-badge { position: absolute; top: 3px; left: 5px; font-size: 0.65rem; font-weight: 800; color: var(--accent-blue); font-family: var(--font-code); }
 .ability-icon { font-size: 1.25rem; margin-top: 4px; }
 .ability-name { font-size: 0.65rem; font-weight: 700; color: var(--text-main); }
