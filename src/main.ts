@@ -92,7 +92,7 @@ class MiloApplication {
     this.ctx.fillStyle = '#0f172a';
     this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
 
-    // Draw Grid
+    // Draw Grid Tiles
     this.ctx.strokeStyle = '#1e293b';
     this.ctx.lineWidth = 1;
     for (let x = 0; x < this.canvas.width; x += 40) {
@@ -108,14 +108,37 @@ class MiloApplication {
       this.ctx.stroke();
     }
 
-    // Draw Player
+    // Draw Enemy Minions
+    const enemies = [
+      { x: 200, y: 150, color: '#ef4444' },
+      { x: 750, y: 380, color: '#ef4444' },
+      { x: 300, y: 420, color: '#a855f7' }
+    ];
+
+    enemies.forEach(e => {
+      this.ctx.fillStyle = e.color;
+      this.ctx.shadowColor = e.color;
+      this.ctx.shadowBlur = 8;
+      this.ctx.beginPath();
+      this.ctx.arc(e.x, e.y, 12, 0, Math.PI * 2);
+      this.ctx.fill();
+      this.ctx.shadowBlur = 0;
+    });
+
+    // Draw Player Hero (Glowing Blue)
     this.ctx.fillStyle = '#38bdf8';
     this.ctx.shadowColor = '#38bdf8';
-    this.ctx.shadowBlur = 12;
+    this.ctx.shadowBlur = 16;
     this.ctx.beginPath();
     this.ctx.arc(this.playerPos.x, this.playerPos.y, 16, 0, Math.PI * 2);
     this.ctx.fill();
     this.ctx.shadowBlur = 0;
+
+    // Player Direction Indicator
+    this.ctx.fillStyle = '#ffffff';
+    this.ctx.beginPath();
+    this.ctx.arc(this.playerPos.x + 6, this.playerPos.y - 4, 3, 0, Math.PI * 2);
+    this.ctx.fill();
   }
 
   private log(msg: string, type: 'info' | 'success' = 'info'): void {
@@ -129,6 +152,13 @@ class MiloApplication {
   }
 }
 
-window.addEventListener('DOMContentLoaded', () => {
-  new MiloApplication();
-});
+function initMilo() {
+  const app = new MiloApplication();
+  app.start(); // Auto start game loop so canvas renders immediately
+}
+
+if (document.readyState === 'loading') {
+  window.addEventListener('DOMContentLoaded', initMilo);
+} else {
+  initMilo();
+}
