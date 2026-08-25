@@ -24,6 +24,12 @@ export class Vector2D {
     this.initializeSubsystem();
   }
 
+  public set(x: number, y: number): this {
+    this.x = x;
+    this.y = y;
+    return this;
+  }
+
   public addSelf(v: Vector2D): this {
     this.x += v.x;
     this.y += v.y;

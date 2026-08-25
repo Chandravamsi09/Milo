@@ -14,7 +14,7 @@
     <header class="app-header">
       <div class="logo-container">
         <span class="logo-icon">🎮</span>
-        <h1 class="logo-text">MILO <span class="badge">ENGINE v1.0</span></h1>
+        <h1 class="logo-text">MILO <span class="badge">ACTION RPG</span></h1>
       </div>
       <div class="header-stats">
         <span class="stat-tag">LOC: <strong id="loc-indicator">50,000+</strong></span>
@@ -33,6 +33,19 @@
           <button id="btn-gen-map" class="btn btn-outline">🎲 Generate Dungeon</button>
         </div>
 
+        <div class="panel controls-guide-panel">
+          <h2>Combat Keybinds</h2>
+          <ul class="keybind-list">
+            <li><span class="key">WASD / ↑↓←→</span> Move Milo</li>
+            <li><span class="key">Shift</span> Dash (i-frames)</li>
+            <li><span class="key">1</span> Magic Bolt (10 MP)</li>
+            <li><span class="key">2</span> Fire Burst (25 MP)</li>
+            <li><span class="key">3</span> Lightning Strike (40 MP)</li>
+            <li><span class="key">4</span> Ultimate Explosion (60 MP)</li>
+            <li><span class="key">Click Canvas</span> Cast / Move</li>
+          </ul>
+        </div>
+
         <div class="panel debug-panel">
           <h2>Engine Subsystems</h2>
           <ul class="subsystem-list">
@@ -49,29 +62,106 @@
 
       <div class="viewport-section">
         <div class="canvas-wrapper">
+          <!-- Boss Health Bar Bar Overlay -->
+          <div id="boss-hp-container" class="boss-hp-container hidden">
+            <div class="boss-name-tag">
+              <span id="boss-name">DUNGEON GUARDIAN BOSS</span>
+              <span id="boss-phase-tag" class="boss-phase-tag">PHASE 1</span>
+            </div>
+            <div class="boss-hp-track">
+              <div id="boss-hp-fill" class="boss-hp-fill" style="width: 100%;"></div>
+            </div>
+          </div>
+
           <canvas id="game-canvas" width="960" height="540"></canvas>
+
+          <!-- Top HUD Overlay -->
           <div id="hud-overlay" class="hud-overlay">
             <div class="player-bar-group">
-              <div class="bar-label">HP</div>
+              <div class="bar-label">HP <span id="hp-text">100 / 100</span></div>
               <div class="bar-track"><div id="hp-fill" class="bar-fill hp" style="width: 100%;"></div></div>
-              <div class="bar-label">MP</div>
+              <div class="bar-label">MP <span id="mp-text">100 / 100</span></div>
               <div class="bar-track"><div id="mp-fill" class="bar-fill mp" style="width: 100%;"></div></div>
             </div>
             <div id="quest-tracker" class="quest-tracker">
               <h3>Active Quest</h3>
               <p id="quest-title">Explore the Ancient Ruins of Milo</p>
-              <p id="quest-desc">Find the 3 lost elemental crystals and defeat the Guardian.</p>
+              <p id="quest-desc">Find & collect blue elemental crystals (0/3).</p>
             </div>
           </div>
+
+          <!-- Bottom Spell Hotbar -->
+          <div class="ability-hotbar">
+            <div class="ability-card" id="card-dash">
+              <div class="key-badge">SHIFT</div>
+              <div class="ability-icon">⚡</div>
+              <div class="ability-name">Dash</div>
+              <div class="cooldown-overlay" id="cd-dash"></div>
+            </div>
+            <div class="ability-card" id="card-spell1">
+              <div class="key-badge">1</div>
+              <div class="ability-icon">🔹</div>
+              <div class="ability-name">Bolt</div>
+              <div class="mp-cost">10 MP</div>
+              <div class="cooldown-overlay" id="cd-spell1"></div>
+            </div>
+            <div class="ability-card" id="card-spell2">
+              <div class="key-badge">2</div>
+              <div class="ability-icon">🔥</div>
+              <div class="ability-name">Fire Burst</div>
+              <div class="mp-cost">25 MP</div>
+              <div class="cooldown-overlay" id="cd-spell2"></div>
+            </div>
+            <div class="ability-card" id="card-spell3">
+              <div class="key-badge">3</div>
+              <div class="ability-icon">🌩️</div>
+              <div class="ability-name">Lightning</div>
+              <div class="mp-cost">40 MP</div>
+              <div class="cooldown-overlay" id="cd-spell3"></div>
+            </div>
+            <div class="ability-card ultimate-card" id="card-spell4">
+              <div class="key-badge">4</div>
+              <div class="ability-icon">💥</div>
+              <div class="ability-name">Ultimate</div>
+              <div class="mp-cost">60 MP</div>
+              <div class="cooldown-overlay" id="cd-spell4"></div>
+            </div>
+          </div>
+
+          <!-- Victory Modal Overlay -->
+          <div id="victory-modal" class="game-modal hidden">
+            <div class="modal-card victory-card">
+              <h1 class="modal-title gold">👑 DUNGEON CLEARED!</h1>
+              <p class="modal-subtitle">Milo has vanquished the Dungeon Guardian!</p>
+              <div class="stats-grid">
+                <div class="stat-box"><span class="stat-lbl">Damage Dealt</span><strong id="stat-damage">0</strong></div>
+                <div class="stat-box"><span class="stat-lbl">Enemies Defeated</span><strong id="stat-kills">0</strong></div>
+                <div class="stat-box"><span class="stat-lbl">Abilities Used</span><strong id="stat-spells">0</strong></div>
+                <div class="stat-box"><span class="stat-lbl">Time Elapsed</span><strong id="stat-time">0s</strong></div>
+              </div>
+              <button id="btn-restart-win" class="btn btn-primary btn-large">PLAY AGAIN 🔄</button>
+            </div>
+          </div>
+
+          <!-- Game Over Modal Overlay -->
+          <div id="gameover-modal" class="game-modal hidden">
+            <div class="modal-card gameover-card">
+              <h1 class="modal-title red">☠️ YOU HAVE FALLEN</h1>
+              <p class="modal-subtitle">The forces of Milo Ancient Ruins have overwhelmed you.</p>
+              <button id="btn-restart-lose" class="btn btn-primary btn-large">TRY AGAIN 🔄</button>
+            </div>
+          </div>
+
         </div>
+
         <div id="log-output" class="log-output">
-          <div class="log-line info">[System] Milo Game Engine Initialized. Ready for input.</div>
+          <div class="log-line info">[System] Milo Game Engine Initialized. Ready for combat input.</div>
         </div>
       </div>
     </main>
 
     <footer class="app-footer">
-      <p>Milo Engine &copy; 2026 - High Performance Modular Web Architecture (116k+ LOC Suite)</p>
+      <p>Milo Engine &copy; 2026 - High Performance Modular Web Architecture (50k+ LOC Suite)</p>
     </footer>
   </div>
 
