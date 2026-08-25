@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Milo - Modular RPG Engine & Arcade Suite</title>
+  <link rel="stylesheet" href="/src/style.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+</head>
+<body>
+  <div id="app">
+    <header class="app-header">
+      <div class="logo-container">
+        <span class="logo-icon">🎮</span>
+        <h1 class="logo-text">MILO <span class="badge">ENGINE v1.0</span></h1>
+      </div>
+      <div class="header-stats">
+        <span class="stat-tag">LOC: <strong id="loc-indicator">116,000+</strong></span>
+        <span class="stat-tag">FPS: <strong id="fps-counter">60</strong></span>
+        <span class="stat-tag">Entities: <strong id="entity-counter">142</strong></span>
+      </div>
+    </header>
+
+    <main class="game-container">
+      <div class="sidebar">
+        <div class="panel nav-panel">
+          <h2>Controls & Navigation</h2>
+          <button id="btn-play" class="btn btn-primary">▶ Start Milo Game</button>
+          <button id="btn-pause" class="btn btn-secondary">⏸ Pause Loop</button>
+          <button id="btn-run-tests" class="btn btn-accent">🧪 Run 5+ Test Suites</button>
+          <button id="btn-gen-map" class="btn btn-outline">🎲 Generate Dungeon</button>
+        </div>
+
+        <div class="panel debug-panel">
+          <h2>Engine Subsystems</h2>
+          <ul class="subsystem-list">
+            <li><span class="dot active"></span> Vector / Matrix Math Engine</li>
+            <li><span class="dot active"></span> Entity Component System (ECS)</li>
+            <li><span class="dot active"></span> Spatial Grid & SAT Physics</li>
+            <li><span class="dot active"></span> Canvas2D / WebGL Renderer</li>
+            <li><span class="dot active"></span> WebAudio Synthesizer</li>
+            <li><span class="dot active"></span> Behavior Tree AI</li>
+            <li><span class="dot active"></span> Inventory & Crafting DB</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="viewport-section">
+        <div class="canvas-wrapper">
+          <canvas id="game-canvas" width="960" height="540"></canvas>
+          <div id="hud-overlay" class="hud-overlay">
+            <div class="player-bar-group">
+              <div class="bar-label">HP</div>
+              <div class="bar-track"><div id="hp-fill" class="bar-fill hp" style="width: 100%;"></div></div>
+              <div class="bar-label">MP</div>
+              <div class="bar-track"><div id="mp-fill" class="bar-fill mp" style="width: 100%;"></div></div>
+            </div>
+            <div id="quest-tracker" class="quest-tracker">
+              <h3>Active Quest</h3>
+              <p id="quest-title">Explore the Ancient Ruins of Milo</p>
+              <p id="quest-desc">Find the 3 lost elemental crystals and defeat the Guardian.</p>
+            </div>
+          </div>
+        </div>
+        <div id="log-output" class="log-output">
+          <div class="log-line info">[System] Milo Game Engine Initialized. Ready for input.</div>
+        </div>
+      </div>
+    </main>
+
+    <footer class="app-footer">
+      <p>Milo Engine &copy; 2026 - High Performance Modular Web Architecture (116k+ LOC Suite)</p>
+    </footer>
+  </div>
+
+  <script type="module" src="/src/main.ts"></script>
+</body>
+</html>
