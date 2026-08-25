@@ -61,12 +61,23 @@ interface TelegraphCircle {
 }
 
 class MiloApplication {
+  // Canvas Elements
   private canvas: HTMLCanvasElement;
   private ctx: CanvasRenderingContext2D;
+  private splashCanvas: HTMLCanvasElement | null = null;
+  private splashCtx: CanvasRenderingContext2D | null = null;
+
+  // Scene Flow State
+  private currentScene: 'SPLASH' | 'STORY' | 'MENU' | 'BRIEFING' | 'GAMEPLAY' = 'SPLASH';
+  private activeMenuIdx: number = 0;
+  private menuItemsCount: number = 4;
+
+  // Engine Loop Ticker
   private isRunning: boolean = false;
   private frameCount: number = 0;
   private fps: number = 60;
   private lastFpsUpdate: number = Date.now();
+  private splashParticles: Particle[] = [];
 
   // Player State
   private playerPos: Vector2D = new Vector2D(480, 270);
@@ -94,7 +105,6 @@ class MiloApplication {
   private gameState: 'EXPLORE' | 'WAVE_DEFENSE' | 'BOSS_FIGHT' | 'VICTORY' | 'GAMEOVER' = 'EXPLORE';
   private currentWave: number = 0;
   private totalWaves: number = 3;
-  private waveEnemiesRemaining: number = 0;
 
   // Entities & FX Arrays
   private enemies: Enemy[] = [];
@@ -109,23 +119,32 @@ class MiloApplication {
   private shakeTime: number = 0;
   private shakeIntensity: number = 0;
 
-  // Statistics
+  // Audio Settings & Synthesizer
+  private audioCtx: AudioContext | null = null;
+  private masterVolume: number = 0.8;
   private damageDealt: number = 0;
   private enemiesKilled: number = 0;
   private spellsCast: number = 0;
   private startTime: number = Date.now();
 
-  // WebAudio API Synthesizer
-  private audioCtx: AudioContext | null = null;
-
   constructor() {
     this.canvas = document.getElementById('game-canvas') as HTMLCanvasElement;
     this.ctx = this.canvas.getContext('2d')!;
+    this.splashCanvas = document.getElementById('splash-canvas') as HTMLCanvasElement;
+    if (this.splashCanvas) {
+      this.splashCtx = this.splashCanvas.getContext('2d')!;
+      this.resizeSplashCanvas();
+    }
+
     this.initAudio();
+    this.initSplashParticles();
     this.generateDungeonMap();
     this.bindEvents();
-    this.log("Milo Action-RPG Engine Initialized. Ready for battle.");
-    this.render(); // Initial frame
+    this.log("Milo Action-RPG Engine Initialized. Opening sequence ready.");
+
+    // Start in Splash Screen Mode
+    this.showScene('SPLASH');
+    this.startSplashLoop();
   }
 
   private initAudio(): void {
@@ -145,7 +164,7 @@ class MiloApplication {
       const gain = this.audioCtx.createGain();
       osc.type = type;
       osc.frequency.setValueAtTime(freq, this.audioCtx.currentTime);
-      gain.gain.setValueAtTime(volume, this.audioCtx.currentTime);
+      gain.gain.setValueAtTime(volume * this.masterVolume, this.audioCtx.currentTime);
       gain.gain.exponentialRampToValueAtTime(0.001, this.audioCtx.currentTime + duration);
       osc.connect(gain);
       gain.connect(this.audioCtx.destination);
@@ -154,8 +173,11 @@ class MiloApplication {
     } catch (e) {}
   }
 
-  private playSfx(type: 'bolt' | 'fire' | 'lightning' | 'ultimate' | 'dash' | 'hit' | 'crystal' | 'boss'): void {
+  private playSfx(type: 'bolt' | 'fire' | 'lightning' | 'ultimate' | 'dash' | 'hit' | 'crystal' | 'boss' | 'hover' | 'click' | 'start'): void {
     switch (type) {
+      case 'hover': this.playTone(440, 'sine', 0.05, 0.08); break;
+      case 'click': this.playTone(660, 'sine', 0.08, 0.12); break;
+      case 'start': this.playTone(880, 'square', 0.25, 0.15); break;
       case 'bolt': this.playTone(580, 'sine', 0.1, 0.12); break;
       case 'fire': this.playTone(220, 'sawtooth', 0.25, 0.15); break;
       case 'lightning': this.playTone(880, 'square', 0.3, 0.18); break;
@@ -167,6 +189,101 @@ class MiloApplication {
     }
   }
 
+  // --- SPLASH CANVAS ANIMATION ---
+  private resizeSplashCanvas(): void {
+    if (!this.splashCanvas) return;
+    this.splashCanvas.width = window.innerWidth;
+    this.splashCanvas.height = window.innerHeight;
+  }
+
+  private initSplashParticles(): void {
+    this.splashParticles = [];
+    const count = 40;
+    for (let i = 0; i < count; i++) {
+      this.splashParticles.push({
+        x: Math.random() * (window.innerWidth || 1000),
+        y: Math.random() * (window.innerHeight || 800),
+        vx: (Math.random() - 0.5) * 0.8,
+        vy: -0.5 - Math.random() * 1.0,
+        life: 0,
+        maxLife: 100 + Math.random() * 100,
+        color: '#38bdf8',
+        size: 2 + Math.random() * 3
+      });
+    }
+  }
+
+  private startSplashLoop(): void {
+    const splashStep = () => {
+      if (this.currentScene !== 'SPLASH') return;
+      this.renderSplash();
+      requestAnimationFrame(splashStep);
+    };
+    requestAnimationFrame(splashStep);
+  }
+
+  private renderSplash(): void {
+    if (!this.splashCtx || !this.splashCanvas) return;
+    this.splashCtx.clearRect(0, 0, this.splashCanvas.width, this.splashCanvas.height);
+
+    this.splashParticles.forEach(p => {
+      p.x += p.vx;
+      p.y += p.vy;
+      p.life++;
+
+      if (p.y < 0 || p.life >= p.maxLife) {
+        p.x = Math.random() * this.splashCanvas!.width;
+        p.y = this.splashCanvas!.height + 10;
+        p.life = 0;
+      }
+
+      const alpha = 1 - p.life / p.maxLife;
+      this.splashCtx!.fillStyle = p.color;
+      this.splashCtx!.globalAlpha = alpha * 0.6;
+      this.splashCtx!.beginPath();
+      this.splashCtx!.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+      this.splashCtx!.fill();
+      this.splashCtx!.globalAlpha = 1.0;
+    });
+  }
+
+  // --- SCENE & OVERLAY MANAGEMENT ---
+  private showScene(scene: 'SPLASH' | 'STORY' | 'MENU' | 'BRIEFING' | 'GAMEPLAY'): void {
+    this.currentScene = scene;
+
+    document.getElementById('splash-screen')?.classList.add('hidden');
+    document.getElementById('story-screen')?.classList.add('hidden');
+    document.getElementById('mainmenu-screen')?.classList.add('hidden');
+    document.getElementById('briefing-screen')?.classList.add('hidden');
+    document.getElementById('gameplay-container')?.classList.add('hidden');
+
+    if (scene === 'SPLASH') {
+      document.getElementById('splash-screen')?.classList.remove('hidden');
+    } else if (scene === 'STORY') {
+      document.getElementById('story-screen')?.classList.remove('hidden');
+    } else if (scene === 'MENU') {
+      document.getElementById('mainmenu-screen')?.classList.remove('hidden');
+      this.updateMenuSelectionDOM();
+    } else if (scene === 'BRIEFING') {
+      document.getElementById('briefing-screen')?.classList.remove('hidden');
+    } else if (scene === 'GAMEPLAY') {
+      document.getElementById('gameplay-container')?.classList.remove('hidden');
+      this.startGameplayLoop();
+    }
+  }
+
+  private updateMenuSelectionDOM(): void {
+    const btns = document.querySelectorAll('.btn-menu');
+    btns.forEach((b, idx) => {
+      if (idx === this.activeMenuIdx) {
+        b.classList.add('active');
+      } else {
+        b.classList.remove('active');
+      }
+    });
+  }
+
+  // --- DUNGEON & ENEMIES ---
   private generateDungeonMap(): void {
     const cols = Math.ceil(this.canvas.width / this.tileSize);
     const rows = Math.ceil(this.canvas.height / this.tileSize);
@@ -184,11 +301,11 @@ class MiloApplication {
       const row: number[] = [];
       for (let c = 0; c < cols; c++) {
         if (r === 0 || r === rows - 1 || c === 0 || c === cols - 1) {
-          row.push(1); // Border wall
+          row.push(1); // Wall
         } else if (Math.random() < 0.10 && (c > 3 || r > 3)) {
-          row.push(1); // Obstacle wall
+          row.push(1); // Obstacle
         } else if (Math.random() < 0.035) {
-          row.push(2); // Crystal Treasure
+          row.push(2); // Crystal
         } else {
           row.push(0); // Floor
         }
@@ -196,7 +313,6 @@ class MiloApplication {
       this.dungeonMap.push(row);
     }
 
-    // Spawn initial exploration roaming minions
     this.spawnMinion('Minion Goblin', 250, 180);
     this.spawnMinion('Void Sorcerer', 700, 350);
     this.spawnMinion('Fire Drake', 350, 420);
@@ -239,7 +355,57 @@ class MiloApplication {
     this.updateQuestTrackerDOM();
   }
 
+  // --- EVENTS & KEYBOARD NAVIGATION ---
   private bindEvents(): void {
+    window.addEventListener('resize', () => this.resizeSplashCanvas());
+
+    // Developer Dashboard Drawer Handlers
+    document.getElementById('btn-toggle-dev')?.addEventListener('click', () => {
+      document.getElementById('dev-dashboard-drawer')?.classList.toggle('hidden');
+    });
+    document.getElementById('btn-close-dev')?.addEventListener('click', () => {
+      document.getElementById('dev-dashboard-drawer')?.classList.add('hidden');
+    });
+
+    // Opening Sequence Button Listeners
+    document.getElementById('splash-screen')?.addEventListener('click', () => this.handleSplashContinue());
+    document.getElementById('btn-story-continue')?.addEventListener('click', () => {
+      this.playSfx('click');
+      this.showScene('MENU');
+    });
+
+    // Menu Buttons
+    document.getElementById('btn-menu-start')?.addEventListener('click', () => this.selectMenuItem(0));
+    document.getElementById('btn-menu-howtoplay')?.addEventListener('click', () => this.selectMenuItem(1));
+    document.getElementById('btn-menu-story')?.addEventListener('click', () => this.selectMenuItem(2));
+    document.getElementById('btn-menu-settings')?.addEventListener('click', () => this.selectMenuItem(3));
+
+    // Modals Close Buttons
+    document.getElementById('btn-close-howtoplay')?.addEventListener('click', () => {
+      this.playSfx('click');
+      document.getElementById('howtoplay-modal')?.classList.add('hidden');
+    });
+    document.getElementById('btn-close-settings')?.addEventListener('click', () => {
+      this.playSfx('click');
+      document.getElementById('settings-modal')?.classList.add('hidden');
+    });
+
+    // Settings Controls
+    const volSlider = document.getElementById('slider-volume') as HTMLInputElement;
+    volSlider?.addEventListener('input', (e) => {
+      const val = parseInt((e.target as HTMLInputElement).value, 10);
+      this.masterVolume = val / 100;
+      const text = document.getElementById('val-volume');
+      if (text) text.innerText = `${val}%`;
+    });
+
+    // Mission Briefing Begin Button
+    document.getElementById('btn-begin-mission')?.addEventListener('click', () => {
+      this.playSfx('start');
+      this.showScene('GAMEPLAY');
+    });
+
+    // Gameplay Navigation & Action Controls
     document.getElementById('btn-play')?.addEventListener('click', () => this.start());
     document.getElementById('btn-pause')?.addEventListener('click', () => this.pause());
     document.getElementById('btn-run-tests')?.addEventListener('click', () => this.runTests());
@@ -247,33 +413,104 @@ class MiloApplication {
     document.getElementById('btn-restart-win')?.addEventListener('click', () => this.restartGame());
     document.getElementById('btn-restart-lose')?.addEventListener('click', () => this.restartGame());
 
-    // Keyboard controls
+    // Global Keyboard Listener
     window.addEventListener('keydown', (e) => {
-      if (['ArrowUp', 'w', 'W'].includes(e.key)) this.playerVel.y = -this.speed;
-      if (['ArrowDown', 's', 'S'].includes(e.key)) this.playerVel.y = this.speed;
-      if (['ArrowLeft', 'a', 'A'].includes(e.key)) this.playerVel.x = -this.speed;
-      if (['ArrowRight', 'd', 'D'].includes(e.key)) this.playerVel.x = this.speed;
+      if (this.currentScene === 'SPLASH') {
+        this.handleSplashContinue();
+        return;
+      }
 
-      if (e.key === 'Shift') this.executeDash();
-      if (e.key === '1') this.castSpell1();
-      if (e.key === '2') this.castSpell2();
-      if (e.key === '3') this.castSpell3();
-      if (e.key === '4') this.castSpell4();
-      if (e.key === ' ') this.castSpell1();
+      if (this.currentScene === 'STORY' && e.key === 'Enter') {
+        this.playSfx('click');
+        this.showScene('MENU');
+        return;
+      }
+
+      if (this.currentScene === 'MENU') {
+        if (e.key === 'ArrowDown') {
+          this.activeMenuIdx = (this.activeMenuIdx + 1) % this.menuItemsCount;
+          this.playSfx('hover');
+          this.updateMenuSelectionDOM();
+        } else if (e.key === 'ArrowUp') {
+          this.activeMenuIdx = (this.activeMenuIdx - 1 + this.menuItemsCount) % this.menuItemsCount;
+          this.playSfx('hover');
+          this.updateMenuSelectionDOM();
+        } else if (e.key === 'Enter') {
+          this.selectMenuItem(this.activeMenuIdx);
+        }
+        return;
+      }
+
+      if (this.currentScene === 'BRIEFING' && e.key === 'Enter') {
+        this.playSfx('start');
+        this.showScene('GAMEPLAY');
+        return;
+      }
+
+      if (e.key === 'Escape') {
+        document.getElementById('howtoplay-modal')?.classList.add('hidden');
+        document.getElementById('settings-modal')?.classList.add('hidden');
+        document.getElementById('dev-dashboard-drawer')?.classList.add('hidden');
+        return;
+      }
+
+      // Gameplay Keybinds
+      if (this.currentScene === 'GAMEPLAY') {
+        if (['ArrowUp', 'w', 'W'].includes(e.key)) this.playerVel.y = -this.speed;
+        if (['ArrowDown', 's', 'S'].includes(e.key)) this.playerVel.y = this.speed;
+        if (['ArrowLeft', 'a', 'A'].includes(e.key)) this.playerVel.x = -this.speed;
+        if (['ArrowRight', 'd', 'D'].includes(e.key)) this.playerVel.x = this.speed;
+
+        if (e.key === 'Shift') this.executeDash();
+        if (e.key === '1') this.castSpell1();
+        if (e.key === '2') this.castSpell2();
+        if (e.key === '3') this.castSpell3();
+        if (e.key === '4') this.castSpell4();
+        if (e.key === ' ') this.castSpell1();
+      }
     });
 
     window.addEventListener('keyup', (e) => {
-      if (['ArrowUp', 'w', 'W', 'ArrowDown', 's', 'S'].includes(e.key)) this.playerVel.y = 0;
-      if (['ArrowLeft', 'a', 'A', 'ArrowRight', 'd', 'D'].includes(e.key)) this.playerVel.x = 0;
+      if (this.currentScene === 'GAMEPLAY') {
+        if (['ArrowUp', 'w', 'W', 'ArrowDown', 's', 'S'].includes(e.key)) this.playerVel.y = 0;
+        if (['ArrowLeft', 'a', 'A', 'ArrowRight', 'd', 'D'].includes(e.key)) this.playerVel.x = 0;
+      }
     });
 
     // Canvas click to cast spell 1 / target
     this.canvas.addEventListener('click', (e) => {
+      if (this.currentScene !== 'GAMEPLAY') return;
       const rect = this.canvas.getBoundingClientRect();
       const clickX = e.clientX - rect.left;
       const clickY = e.clientY - rect.top;
       this.castSpell1Targeted(clickX, clickY);
     });
+  }
+
+  private handleSplashContinue(): void {
+    if (this.currentScene !== 'SPLASH') return;
+    this.playSfx('click');
+    this.showScene('STORY');
+  }
+
+  private selectMenuItem(idx: number): void {
+    this.playSfx('click');
+    this.activeMenuIdx = idx;
+    this.updateMenuSelectionDOM();
+
+    if (idx === 0) {
+      // START GAME -> Briefing
+      this.showScene('BRIEFING');
+    } else if (idx === 1) {
+      // HOW TO PLAY Modal
+      document.getElementById('howtoplay-modal')?.classList.remove('hidden');
+    } else if (idx === 2) {
+      // STORY
+      this.showScene('STORY');
+    } else if (idx === 3) {
+      // SETTINGS Modal
+      document.getElementById('settings-modal')?.classList.remove('hidden');
+    }
   }
 
   public start(): void {
@@ -286,6 +523,13 @@ class MiloApplication {
   public pause(): void {
     this.isRunning = false;
     this.log("⏸ Milo Game Ticker Paused.");
+  }
+
+  private startGameplayLoop(): void {
+    this.playerHp = 100;
+    this.playerMp = 100;
+    this.playerPos.set(480, 270);
+    this.start();
   }
 
   private restartGame(): void {
@@ -321,13 +565,12 @@ class MiloApplication {
   private executeDash(): void {
     if (this.dashCooldown > 0 || this.isDashing) return;
     this.isDashing = true;
-    this.dashTimer = 10; // 0.2s boost
-    this.dashCooldown = 60; // 1s CD
-    this.iFrameTimer = 25; // 0.4s i-frames
+    this.dashTimer = 10;
+    this.dashCooldown = 60;
+    this.iFrameTimer = 25;
     this.speed = this.baseSpeed * 2.8;
     this.playSfx('dash');
 
-    // Spawn Dash trail particles
     for (let i = 0; i < 8; i++) {
       this.particles.push({
         x: this.playerPos.x, y: this.playerPos.y,
@@ -338,7 +581,6 @@ class MiloApplication {
   }
 
   private castSpell1(): void {
-    // Magic Bolt towards nearest enemy or default facing
     let targetX = this.playerPos.x + 100, targetY = this.playerPos.y;
     const nearest = this.getNearestEnemy();
     if (nearest) { targetX = nearest.x; targetY = nearest.y; }
@@ -349,7 +591,7 @@ class MiloApplication {
     if (this.spell1Cooldown > 0) return;
     if (!this.consumeMp(10)) return;
 
-    this.spell1Cooldown = 15; // 0.25s CD
+    this.spell1Cooldown = 15;
     this.spellsCast++;
     this.playSfx('bolt');
 
@@ -364,16 +606,14 @@ class MiloApplication {
   }
 
   private castSpell2(): void {
-    // Fire Burst AoE around Milo
     if (this.spell2Cooldown > 0) return;
     if (!this.consumeMp(25)) return;
 
-    this.spell2Cooldown = 90; // 1.5s CD
+    this.spell2Cooldown = 90;
     this.spellsCast++;
     this.playSfx('fire');
     this.triggerScreenShake(8, 4);
 
-    // Spawn Fire ring particles & damage nearby enemies
     for (let i = 0; i < 32; i++) {
       const angle = (Math.PI * 2 * i) / 32;
       const spd = 4 + Math.random() * 3;
@@ -384,7 +624,6 @@ class MiloApplication {
       });
     }
 
-    // Damage enemies within 140px radius
     this.enemies.forEach(e => {
       const dist = Math.hypot(e.x - this.playerPos.x, e.y - this.playerPos.y);
       if (dist <= 140) {
@@ -396,7 +635,6 @@ class MiloApplication {
   }
 
   private castSpell3(): void {
-    // Lightning Strike high single-target
     if (this.spell3Cooldown > 0) return;
     if (!this.consumeMp(40)) return;
 
@@ -406,12 +644,11 @@ class MiloApplication {
       return;
     }
 
-    this.spell3Cooldown = 180; // 3.0s CD
+    this.spell3Cooldown = 180;
     this.spellsCast++;
     this.playSfx('lightning');
     this.triggerScreenShake(12, 6);
 
-    // Lightning visual beam particles
     for (let i = 0; i < 20; i++) {
       const px = this.playerPos.x + (target.x - this.playerPos.x) * (i / 20);
       const py = this.playerPos.y + (target.y - this.playerPos.y) * (i / 20) + (Math.random() - 0.5) * 15;
@@ -426,16 +663,14 @@ class MiloApplication {
   }
 
   private castSpell4(): void {
-    // Ultimate Ability Energy Explosion
     if (this.spell4Cooldown > 0) return;
     if (!this.consumeMp(60)) return;
 
-    this.spell4Cooldown = 480; // 8.0s CD
+    this.spell4Cooldown = 480;
     this.spellsCast++;
     this.playSfx('ultimate');
     this.triggerScreenShake(25, 14);
 
-    // Shockwave explosion particles
     for (let i = 0; i < 60; i++) {
       const angle = (Math.PI * 2 * i) / 60;
       const spd = 6 + Math.random() * 5;
@@ -446,7 +681,6 @@ class MiloApplication {
       });
     }
 
-    // Huge damage to ALL enemies on screen
     this.enemies.forEach(e => {
       this.applyDamageToEnemy(e, 260, '#a855f7');
     });
@@ -485,7 +719,6 @@ class MiloApplication {
     e.hitFlashTimer = 6;
     this.damageDealt += dmg;
 
-    // Add floating damage text
     this.floatingTexts.push({
       x: e.x + (Math.random() - 0.5) * 20,
       y: e.y - e.radius - 10,
@@ -493,7 +726,6 @@ class MiloApplication {
       life: 0, maxLife: 35
     });
 
-    // Impact hit particles
     for (let i = 0; i < 6; i++) {
       this.particles.push({
         x: e.x, y: e.y,
@@ -504,7 +736,6 @@ class MiloApplication {
 
     if (e.isBoss) {
       this.updateBossBarDOM(e.hp, e.maxHp, e.phase || 1);
-      // Check Boss Phase Transitions
       const ratio = e.hp / e.maxHp;
       if (ratio <= 0.35 && e.phase !== 3) {
         e.phase = 3;
@@ -537,7 +768,7 @@ class MiloApplication {
 
   // --- GAME LOOP & UPDATES ---
   private loop(): void {
-    if (!this.isRunning) return;
+    if (!this.isRunning || this.currentScene !== 'GAMEPLAY') return;
 
     this.update();
     this.render();
@@ -556,7 +787,6 @@ class MiloApplication {
   }
 
   private update(): void {
-    // Cooldown updates
     if (this.spell1Cooldown > 0) this.spell1Cooldown--;
     if (this.spell2Cooldown > 0) this.spell2Cooldown--;
     if (this.spell3Cooldown > 0) this.spell3Cooldown--;
@@ -574,12 +804,10 @@ class MiloApplication {
 
     this.updateHotbarCDDOM();
 
-    // Player Movement
     this.playerPos.addSelf(this.playerVel);
     this.playerPos.x = Math.max(30, Math.min(this.canvas.width - 30, this.playerPos.x));
     this.playerPos.y = Math.max(30, Math.min(this.canvas.height - 30, this.playerPos.y));
 
-    // Crystal Collection Check
     if (this.gameState === 'EXPLORE') {
       for (let r = 0; r < this.dungeonMap.length; r++) {
         for (let c = 0; c < this.dungeonMap[r].length; c++) {
@@ -589,7 +817,7 @@ class MiloApplication {
             const dist = Math.hypot(this.playerPos.x - crystalX, this.playerPos.y - crystalY);
 
             if (dist <= 26) {
-              this.dungeonMap[r][c] = 0; // Clear tile
+              this.dungeonMap[r][c] = 0;
               this.crystalsCollected++;
               this.playerMp = Math.min(100, this.playerMp + 35);
               this.playerHp = Math.min(100, this.playerHp + 20);
@@ -608,14 +836,12 @@ class MiloApplication {
       }
     }
 
-    // Update Projectiles
     for (let i = this.projectiles.length - 1; i >= 0; i--) {
       const p = this.projectiles[i];
       p.x += p.vx;
       p.y += p.vy;
       p.life++;
 
-      // Projectile vs Enemy collision
       if (!p.isEnemy) {
         for (let j = this.enemies.length - 1; j >= 0; j--) {
           const e = this.enemies[j];
@@ -627,7 +853,6 @@ class MiloApplication {
           }
         }
       } else {
-        // Enemy Projectile vs Player collision
         if (Math.hypot(p.x - this.playerPos.x, p.y - this.playerPos.y) <= p.radius + 16) {
           this.applyDamageToPlayer(p.damage);
           this.projectiles.splice(i, 1);
@@ -639,16 +864,13 @@ class MiloApplication {
       }
     }
 
-    // Update Enemies & AI behavior
     for (let i = this.enemies.length - 1; i >= 0; i--) {
       const e = this.enemies[i];
       if (e.hitFlashTimer > 0) e.hitFlashTimer--;
 
-      // Check Enemy Death
       if (e.hp <= 0) {
         this.enemiesKilled++;
         this.log(`💀 Slain ${e.type}!`, 'success');
-        // Death particle burst
         for (let k = 0; k < 15; k++) {
           this.particles.push({
             x: e.x, y: e.y,
@@ -667,11 +889,9 @@ class MiloApplication {
         continue;
       }
 
-      // Enemy AI & Movement Patterns
       const distToPlayer = Math.hypot(this.playerPos.x - e.x, this.playerPos.y - e.y);
 
       if (e.isBoss) {
-        // BOSS AI (3 Phases)
         const phase = e.phase || 1;
         const bossSpeed = e.speed * (phase === 3 ? 1.6 : phase === 2 ? 1.3 : 1.0);
         const angle = Math.atan2(this.playerPos.y - e.y, this.playerPos.x - e.x);
@@ -683,13 +903,11 @@ class MiloApplication {
         if (e.attackCooldown >= attackInterval) {
           e.attackCooldown = 0;
 
-          // Telegraph circle warning before boss attack
           this.telegraphs.push({
             x: this.playerPos.x, y: this.playerPos.y,
             radius: 50 + phase * 15, timer: 0, maxTimer: 35
           });
 
-          // Multi-shot boss fireballs
           const shots = phase === 3 ? 8 : phase === 2 ? 5 : 3;
           for (let s = 0; s < shots; s++) {
             const spreadAngle = angle + (s - (shots - 1) / 2) * 0.35;
@@ -702,7 +920,6 @@ class MiloApplication {
           }
         }
       } else if (e.type === 'Minion Goblin') {
-        // Fast Melee Chaser
         const angle = Math.atan2(this.playerPos.y - e.y, this.playerPos.x - e.x);
         e.x += Math.cos(angle) * e.speed;
         e.y += Math.sin(angle) * e.speed;
@@ -710,7 +927,6 @@ class MiloApplication {
           this.applyDamageToPlayer(8);
         }
       } else if (e.type === 'Void Sorcerer') {
-        // Ranged Spellcaster (keeps distance)
         if (distToPlayer < 200) {
           const angle = Math.atan2(e.y - this.playerPos.y, e.x - this.playerPos.x);
           e.x += Math.cos(angle) * e.speed;
@@ -728,7 +944,6 @@ class MiloApplication {
           });
         }
       } else if (e.type === 'Fire Drake') {
-        // Tough Ranged Drake
         const angle = Math.atan2(this.playerPos.y - e.y, this.playerPos.x - e.x);
         e.x += Math.cos(angle) * e.speed * 0.7;
         e.y += Math.sin(angle) * e.speed * 0.7;
@@ -745,18 +960,15 @@ class MiloApplication {
       }
     }
 
-    // Update Telegraph Circles & AoE Explosions
     for (let i = this.telegraphs.length - 1; i >= 0; i--) {
       const t = this.telegraphs[i];
       t.timer++;
       if (t.timer >= t.maxTimer) {
-        // Telegraph explodes!
         this.playSfx('fire');
         this.triggerScreenShake(8, 5);
         if (Math.hypot(this.playerPos.x - t.x, this.playerPos.y - t.y) <= t.radius) {
           this.applyDamageToPlayer(30);
         }
-        // Burst particles
         for (let k = 0; k < 20; k++) {
           const a = Math.random() * Math.PI * 2;
           const r = Math.random() * t.radius;
@@ -770,14 +982,12 @@ class MiloApplication {
       }
     }
 
-    // Update Particles
     for (let i = this.particles.length - 1; i >= 0; i--) {
       const p = this.particles[i];
       p.x += p.vx; p.y += p.vy; p.life++;
       if (p.life >= p.maxLife) this.particles.splice(i, 1);
     }
 
-    // Update Floating Damage Texts
     for (let i = this.floatingTexts.length - 1; i >= 0; i--) {
       const ft = this.floatingTexts[i];
       ft.y += ft.vy; ft.life++;
@@ -785,7 +995,6 @@ class MiloApplication {
       if (ft.life >= ft.maxLife) this.floatingTexts.splice(i, 1);
     }
 
-    // Slowly regenerate MP & HUD
     if (this.playerMp < 100 && this.frameCount % 18 === 0) {
       this.playerMp = Math.min(100, this.playerMp + 1);
       this.updateHUD();
@@ -796,9 +1005,9 @@ class MiloApplication {
   }
 
   private applyDamageToPlayer(damage: number): void {
-    if (this.iFrameTimer > 0) return; // Protected by i-frames/dash
+    if (this.iFrameTimer > 0) return;
     this.playerHp = Math.max(0, this.playerHp - damage);
-    this.iFrameTimer = 25; // 0.4s i-frames
+    this.iFrameTimer = 25;
     this.playSfx('hit');
     this.triggerScreenShake(6, 4);
     this.updateHUD();
@@ -847,7 +1056,6 @@ class MiloApplication {
       if (this.currentWave < 3) {
         this.spawnWave(this.currentWave + 1);
       } else {
-        // All 3 waves defeated -> Boss Awakens!
         this.spawnDungeonGuardianBoss();
       }
     }
@@ -962,7 +1170,6 @@ class MiloApplication {
   }
 
   private render(): void {
-    // Screen shake offset calculation
     let shakeX = 0, shakeY = 0;
     if (this.shakeTime > 0) {
       this.shakeTime--;
@@ -973,13 +1180,11 @@ class MiloApplication {
     this.ctx.save();
     this.ctx.translate(shakeX, shakeY);
 
-    // Canvas Background
-    this.ctx.fillStyle = '#0f172a';
+    this.ctx.fillStyle = '#0b0f19';
     this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
 
     const pulse = (Math.sin(Date.now() * 0.005) + 1) * 0.5;
 
-    // Draw Dungeon Map Grid & Walls
     for (let r = 0; r < this.dungeonMap.length; r++) {
       for (let c = 0; c < this.dungeonMap[r].length; c++) {
         const tile = this.dungeonMap[r][c];
@@ -1012,7 +1217,6 @@ class MiloApplication {
       }
     }
 
-    // Render Red Telegraph Warning Circles
     this.telegraphs.forEach(t => {
       const progress = t.timer / t.maxTimer;
       this.ctx.fillStyle = `rgba(239, 68, 68, ${0.15 + progress * 0.25})`;
@@ -1024,7 +1228,6 @@ class MiloApplication {
       this.ctx.stroke();
     });
 
-    // Render Projectiles
     this.projectiles.forEach(p => {
       this.ctx.fillStyle = p.color;
       this.ctx.shadowColor = p.color;
@@ -1035,7 +1238,6 @@ class MiloApplication {
       this.ctx.shadowBlur = 0;
     });
 
-    // Render Particles
     this.particles.forEach(p => {
       const alpha = 1 - p.life / p.maxLife;
       this.ctx.fillStyle = p.color;
@@ -1046,7 +1248,6 @@ class MiloApplication {
       this.ctx.globalAlpha = 1.0;
     });
 
-    // Render Enemies & Enemy Health Bars
     this.enemies.forEach(e => {
       const isHit = e.hitFlashTimer > 0;
       this.ctx.fillStyle = isHit ? '#ffffff' : e.color;
@@ -1057,7 +1258,6 @@ class MiloApplication {
       this.ctx.fill();
       this.ctx.shadowBlur = 0;
 
-      // Boss Enraged Aura Ring
       if (e.isBoss && e.phase === 3) {
         this.ctx.strokeStyle = '#ef4444';
         this.ctx.lineWidth = 3;
@@ -1066,7 +1266,6 @@ class MiloApplication {
         this.ctx.stroke();
       }
 
-      // Minion / Enemy HP Bar rendered above enemy head
       if (!e.isBoss) {
         const barWidth = e.radius * 2.2;
         const barHeight = 4;
@@ -1079,14 +1278,12 @@ class MiloApplication {
         this.ctx.fillRect(bx, by, barWidth * (e.hp / e.maxHp), barHeight);
       }
 
-      // Enemy Name Tag
       this.ctx.fillStyle = e.isBoss ? '#fbbf24' : '#94a3b8';
       this.ctx.font = e.isBoss ? 'bold 12px sans-serif' : '10px sans-serif';
       this.ctx.textAlign = 'center';
       this.ctx.fillText(e.type, e.x, e.y - e.radius - (e.isBoss ? 14 : 18));
     });
 
-    // Render Floating Damage Numbers
     this.floatingTexts.forEach(ft => {
       this.ctx.fillStyle = ft.color;
       this.ctx.globalAlpha = ft.opacity;
@@ -1096,7 +1293,6 @@ class MiloApplication {
       this.ctx.globalAlpha = 1.0;
     });
 
-    // Render Player Hero (Glowing Blue Avatar)
     const isFlashing = this.iFrameTimer > 0 && Math.floor(this.iFrameTimer / 4) % 2 === 0;
     if (!isFlashing) {
       this.ctx.fillStyle = this.isDashing ? '#60a5fa' : '#38bdf8';
@@ -1107,13 +1303,11 @@ class MiloApplication {
       this.ctx.fill();
       this.ctx.shadowBlur = 0;
 
-      // Player Core Pulse
       this.ctx.fillStyle = '#ffffff';
       this.ctx.beginPath();
       this.ctx.arc(this.playerPos.x, this.playerPos.y, 6, 0, Math.PI * 2);
       this.ctx.fill();
 
-      // Hero Name Tag
       this.ctx.fillStyle = '#38bdf8';
       this.ctx.font = 'bold 12px sans-serif';
       this.ctx.textAlign = 'center';
@@ -1135,8 +1329,7 @@ class MiloApplication {
 }
 
 function initMilo() {
-  const app = new MiloApplication();
-  app.start(); // Auto-start loop so canvas is active immediately
+  new MiloApplication();
 }
 
 if (document.readyState === 'loading') {

@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Milo - Modular RPG Engine & Arcade Suite</title>
+  <title>Milo - Echoes of the Ancient Ruins</title>
   <link rel="stylesheet" href="/src/style.css" />
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -11,58 +11,173 @@
 </head>
 <body>
   <div id="app">
+    <!-- Player-Facing App Header -->
     <header class="app-header">
       <div class="logo-container">
         <span class="logo-icon">🎮</span>
         <h1 class="logo-text">MILO <span class="badge">ACTION RPG</span></h1>
       </div>
-      <div class="header-stats">
-        <span class="stat-tag">LOC: <strong id="loc-indicator">50,000+</strong></span>
-        <span class="stat-tag">FPS: <strong id="fps-counter">60</strong></span>
-        <span class="stat-tag">Entities: <strong id="entity-counter">142</strong></span>
+      <div class="header-actions">
+        <button id="btn-toggle-dev" class="btn-dev-toggle">🛠️ Developer Dashboard</button>
       </div>
     </header>
 
-    <main class="game-container">
-      <div class="sidebar">
-        <div class="panel nav-panel">
-          <h2>Controls & Navigation</h2>
-          <button id="btn-play" class="btn btn-primary">▶ Start Milo Game</button>
-          <button id="btn-pause" class="btn btn-secondary">⏸ Pause Loop</button>
-          <button id="btn-run-tests" class="btn btn-accent">🧪 Run 5+ Test Suites</button>
-          <button id="btn-gen-map" class="btn btn-outline">🎲 Generate Dungeon</button>
+    <!-- Collapsible Developer / Engine Telemetry Drawer -->
+    <div id="dev-dashboard-drawer" class="dev-drawer hidden">
+      <div class="drawer-content">
+        <div class="drawer-header">
+          <h2>🛠️ Engine Telemetry & Testing Dashboard</h2>
+          <span class="drawer-close" id="btn-close-dev">✕</span>
         </div>
-
-        <div class="panel controls-guide-panel">
-          <h2>Combat Keybinds</h2>
-          <ul class="keybind-list">
-            <li><span class="key">WASD / ↑↓←→</span> Move Milo</li>
-            <li><span class="key">Shift</span> Dash (i-frames)</li>
-            <li><span class="key">1</span> Magic Bolt (10 MP)</li>
-            <li><span class="key">2</span> Fire Burst (25 MP)</li>
-            <li><span class="key">3</span> Lightning Strike (40 MP)</li>
-            <li><span class="key">4</span> Ultimate Explosion (60 MP)</li>
-            <li><span class="key">Click Canvas</span> Cast / Move</li>
-          </ul>
-        </div>
-
-        <div class="panel debug-panel">
-          <h2>Engine Subsystems</h2>
-          <ul class="subsystem-list">
-            <li><span class="dot active"></span> Vector / Matrix Math Engine</li>
-            <li><span class="dot active"></span> Entity Component System (ECS)</li>
-            <li><span class="dot active"></span> Spatial Grid & SAT Physics</li>
-            <li><span class="dot active"></span> Canvas2D / WebGL Renderer</li>
-            <li><span class="dot active"></span> WebAudio Synthesizer</li>
-            <li><span class="dot active"></span> Behavior Tree AI</li>
-            <li><span class="dot active"></span> Inventory & Crafting DB</li>
-          </ul>
+        <div class="drawer-body">
+          <div class="drawer-stats">
+            <span class="stat-tag">Codebase Volume: <strong id="loc-indicator">50,000+ LOC</strong></span>
+            <span class="stat-tag">FPS Ticker: <strong id="fps-counter">60</strong></span>
+            <span class="stat-tag">Active Entities: <strong id="entity-counter">142</strong></span>
+          </div>
+          <div class="drawer-controls">
+            <button id="btn-run-tests" class="btn btn-accent btn-sm">🧪 Run 5+ Test Suites</button>
+            <button id="btn-gen-map" class="btn btn-outline btn-sm">🎲 Generate Dungeon Grid</button>
+          </div>
+          <div class="drawer-subsystems">
+            <h3>Engine Subsystems (ECS & SAT Physics)</h3>
+            <ul class="subsystem-list horizontal">
+              <li><span class="dot active"></span> Vector/Matrix Math</li>
+              <li><span class="dot active"></span> ECS Architecture</li>
+              <li><span class="dot active"></span> Spatial Grid & SAT</li>
+              <li><span class="dot active"></span> Canvas2D/WebGL</li>
+              <li><span class="dot active"></span> WebAudio Synthesizer</li>
+              <li><span class="dot active"></span> Behavior Tree AI</li>
+            </ul>
+          </div>
         </div>
       </div>
+    </div>
 
-      <div class="viewport-section">
+    <!-- 1. Cinematic Splash Screen -->
+    <div id="splash-screen" class="opening-overlay">
+      <canvas id="splash-canvas"></canvas>
+      <div class="splash-content">
+        <div class="splash-badge">FANTASY ACTION RPG</div>
+        <h1 class="splash-title">MILO</h1>
+        <p class="splash-subtitle">Echoes of the Ancient Ruins</p>
+        <p class="splash-tagline">“Collect the Crystals. Awaken the Guardian. Survive the Ruins.”</p>
+        <div class="splash-prompt pulse">PRESS ANY KEY OR CLICK TO START</div>
+      </div>
+    </div>
+
+    <!-- 2. Story Introduction Screen -->
+    <div id="story-screen" class="opening-overlay hidden">
+      <div class="story-card">
+        <div class="story-header">
+          <span class="story-icon">📜</span>
+          <h2>THE ANCIENT RUINS</h2>
+        </div>
+        <div class="story-body">
+          <p>Ancient ruins have awakened after centuries of silence deep beneath the continent.</p>
+          <p>Three elemental crystals of immense power are hidden within the labyrinth.</p>
+          <p>Their awakening has summoned the Dungeon Guardian and its aggressive monster army.</p>
+          <p>Milo must enter the ruins, recover the crystals, survive the enemy waves, and defeat the Guardian.</p>
+        </div>
+        <button id="btn-story-continue" class="btn btn-primary btn-large">CONTINUE → [ENTER]</button>
+      </div>
+    </div>
+
+    <!-- 3. Main Menu Screen -->
+    <div id="mainmenu-screen" class="opening-overlay hidden">
+      <div class="menu-card">
+        <h1 class="menu-title">MILO</h1>
+        <p class="menu-subtitle">Echoes of the Ancient Ruins</p>
+        <div class="menu-buttons">
+          <button id="btn-menu-start" class="btn btn-menu active" data-idx="0">▶ START GAME</button>
+          <button id="btn-menu-howtoplay" class="btn btn-menu" data-idx="1">⚔ HOW TO PLAY</button>
+          <button id="btn-menu-story" class="btn btn-menu" data-idx="2">📖 STORY LORE</button>
+          <button id="btn-menu-settings" class="btn btn-menu" data-idx="3">⚙ SETTINGS</button>
+        </div>
+        <div class="menu-footer-hint">Use ↑ ↓ Arrow Keys to Navigate • ENTER to Select</div>
+      </div>
+    </div>
+
+    <!-- 4. How To Play Modal -->
+    <div id="howtoplay-modal" class="game-modal hidden">
+      <div class="modal-card wide-card">
+        <h2 class="modal-title gold">⚔ HOW TO PLAY</h2>
+        <div class="howtoplay-body">
+          <div class="guide-section">
+            <h3>🎮 Controls</h3>
+            <ul class="guide-list">
+              <li><span class="key">WASD / ↑↓←→</span> Move Milo across the dungeon</li>
+              <li><span class="key">Shift</span> Invulnerable Dash (0.4s i-frames)</li>
+              <li><span class="key">Left Click</span> Cast Magic Bolt at target</li>
+            </ul>
+          </div>
+          <div class="guide-section">
+            <h3>⚡ Spells & Abilities</h3>
+            <ul class="guide-list">
+              <li><span class="key">1</span> Magic Bolt (10 MP) — Fast ranged bolt</li>
+              <li><span class="key">2</span> Fire Burst (25 MP) — Area of effect explosion</li>
+              <li><span class="key">3</span> Lightning (40 MP) — Targeted high single-target strike</li>
+              <li><span class="key">4</span> Ultimate (60 MP) — Screen-clearing shockwave</li>
+            </ul>
+          </div>
+          <div class="guide-section">
+            <h3>💎 Mission Objective</h3>
+            <p>1. Collect 3 Glowing Blue Elemental Crystals (+35 MP, +20 HP restore each).</p>
+            <p>2. Survive 3 waves of Goblins, Sorcerers, and Fire Drakes.</p>
+            <p>3. Defeat the 3-Phase Dungeon Guardian Boss!</p>
+          </div>
+        </div>
+        <button id="btn-close-howtoplay" class="btn btn-primary">BACK TO MENU [ESC]</button>
+      </div>
+    </div>
+
+    <!-- 5. Settings Modal -->
+    <div id="settings-modal" class="game-modal hidden">
+      <div class="modal-card">
+        <h2 class="modal-title gold">⚙ GAME SETTINGS</h2>
+        <div class="settings-body">
+          <div class="setting-row">
+            <label for="slider-volume">Audio SFX Volume</label>
+            <input type="range" id="slider-volume" min="0" max="100" value="80" />
+            <span id="val-volume">80%</span>
+          </div>
+          <div class="setting-row">
+            <label for="toggle-graphics">Particle Graphics Quality</label>
+            <button id="toggle-graphics" class="btn btn-secondary btn-sm">HIGH PERFORMANCE</button>
+          </div>
+          <div class="setting-row">
+            <label for="toggle-screenshake">Screen Shake Effects</label>
+            <button id="toggle-screenshake" class="btn btn-accent btn-sm">ENABLED</button>
+          </div>
+        </div>
+        <button id="btn-close-settings" class="btn btn-primary">BACK TO MENU [ESC]</button>
+      </div>
+    </div>
+
+    <!-- 6. Mission Briefing Screen -->
+    <div id="briefing-screen" class="opening-overlay hidden">
+      <div class="briefing-card">
+        <div class="briefing-header">
+          <span class="mission-tag">MISSION 01</span>
+          <h2>THE ANCIENT RUINS</h2>
+        </div>
+        <div class="briefing-body">
+          <h3>PRIMARY OBJECTIVES</h3>
+          <ul class="briefing-checklist">
+            <li><span class="chk">🔹</span> Find and collect all 3 Elemental Crystals (0/3)</li>
+            <li><span class="chk">🔹</span> Survive the 3-Wave Monster Ambush</li>
+            <li><span class="chk">🔹</span> Defeat the 3-Phase Dungeon Guardian Boss</li>
+          </ul>
+        </div>
+        <button id="btn-begin-mission" class="btn btn-primary btn-large glow">[ ENTER ] BEGIN MISSION</button>
+      </div>
+    </div>
+
+    <!-- 7. Primary Gameplay Interface -->
+    <main class="game-container hidden" id="gameplay-container">
+      <div class="viewport-section full-viewport">
         <div class="canvas-wrapper">
-          <!-- Boss Health Bar Bar Overlay -->
+          <!-- Boss Health Bar Overlay -->
           <div id="boss-hp-container" class="boss-hp-container hidden">
             <div class="boss-name-tag">
               <span id="boss-name">DUNGEON GUARDIAN BOSS</span>
