@@ -1,0 +1,18 @@
+{
+  "name": "milo-game-engine",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview",
+    "test": "node tests/run_all.js",
+    "count-loc": "python scripts/count_loc.py"
+  },
+  "devDependencies": {
+    "typescript": "^5.2.2",
+    "vite": "^5.0.0"
+  },
+  "description": "Milo: Modular RPG Engine & Arcade Suite with 50k+ LOC and full unit tests."
+}
