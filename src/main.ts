@@ -399,6 +399,30 @@ class MiloApplication {
       if (text) text.innerText = `${val}%`;
     });
 
+    const gfxToggle = document.getElementById('toggle-graphics');
+    gfxToggle?.addEventListener('click', () => {
+      this.playSfx('click');
+      if (gfxToggle.innerText.includes('HIGH PERFORMANCE')) {
+        gfxToggle.innerText = 'ULTRA QUALITY ✨';
+        gfxToggle.className = 'btn btn-primary btn-sm';
+      } else {
+        gfxToggle.innerText = 'HIGH PERFORMANCE ⚡';
+        gfxToggle.className = 'btn btn-secondary btn-sm';
+      }
+    });
+
+    const shakeToggle = document.getElementById('toggle-screenshake');
+    shakeToggle?.addEventListener('click', () => {
+      this.playSfx('click');
+      if (shakeToggle.innerText.includes('ENABLED')) {
+        shakeToggle.innerText = 'DISABLED 🚫';
+        shakeToggle.className = 'btn btn-secondary btn-sm';
+      } else {
+        shakeToggle.innerText = 'ENABLED 🔔';
+        shakeToggle.className = 'btn btn-accent btn-sm';
+      }
+    });
+
     // Mission Briefing Begin Button
     document.getElementById('btn-begin-mission')?.addEventListener('click', () => {
       this.playSfx('start');
