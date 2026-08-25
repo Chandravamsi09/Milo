@@ -198,6 +198,9 @@
               <div class="bar-label">MP <span id="mp-text">100 / 100</span></div>
               <div class="bar-track"><div id="mp-fill" class="bar-fill mp" style="width: 100%;"></div></div>
             </div>
+            <div class="hud-center-actions">
+              <button id="btn-pause-ingame" class="btn-pause-ingame">⏸️ PAUSE</button>
+            </div>
             <div id="quest-tracker" class="quest-tracker">
               <h3>Active Quest</h3>
               <p id="quest-title">Explore the Ancient Ruins of Milo</p>
@@ -240,6 +243,19 @@
               <div class="ability-name">Ultimate</div>
               <div class="mp-cost">60 MP</div>
               <div class="cooldown-overlay" id="cd-spell4"></div>
+            </div>
+          </div>
+
+          <!-- In-Game Pause Modal Overlay -->
+          <div id="pause-modal" class="game-modal hidden">
+            <div class="modal-card pause-card">
+              <h1 class="modal-title blue">⏸️ GAME PAUSED</h1>
+              <p class="modal-subtitle">Take a breather or choose an option below.</p>
+              <div class="pause-actions">
+                <button id="btn-resume-game" class="btn btn-primary btn-large">▶ RESUME GAME</button>
+                <button id="btn-restart-pause" class="btn btn-secondary btn-large">🔄 RESTART NEW GAME</button>
+                <button id="btn-exit-menu" class="btn btn-outline btn-large">🚪 EXIT TO MAIN MENU</button>
+              </div>
             </div>
           </div>
 

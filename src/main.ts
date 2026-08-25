@@ -429,6 +429,15 @@ class MiloApplication {
       this.showScene('GAMEPLAY');
     });
 
+    // In-Game Pause Button & Pause Modal Handlers
+    document.getElementById('btn-pause-ingame')?.addEventListener('click', () => this.togglePause());
+    document.getElementById('btn-resume-game')?.addEventListener('click', () => this.resumeFromPause());
+    document.getElementById('btn-restart-pause')?.addEventListener('click', () => {
+      document.getElementById('pause-modal')?.classList.add('hidden');
+      this.restartGame();
+    });
+    document.getElementById('btn-exit-menu')?.addEventListener('click', () => this.exitToMainMenu());
+
     // Gameplay Navigation & Action Controls
     document.getElementById('btn-play')?.addEventListener('click', () => this.start());
     document.getElementById('btn-pause')?.addEventListener('click', () => this.pause());
@@ -472,9 +481,13 @@ class MiloApplication {
       }
 
       if (e.key === 'Escape') {
-        document.getElementById('howtoplay-modal')?.classList.add('hidden');
-        document.getElementById('settings-modal')?.classList.add('hidden');
-        document.getElementById('dev-dashboard-drawer')?.classList.add('hidden');
+        if (this.currentScene === 'GAMEPLAY') {
+          this.togglePause();
+        } else {
+          document.getElementById('howtoplay-modal')?.classList.add('hidden');
+          document.getElementById('settings-modal')?.classList.add('hidden');
+          document.getElementById('dev-dashboard-drawer')?.classList.add('hidden');
+        }
         return;
       }
 
@@ -547,6 +560,31 @@ class MiloApplication {
   public pause(): void {
     this.isRunning = false;
     this.log("⏸ Milo Game Ticker Paused.");
+  }
+
+  private togglePause(): void {
+    if (this.currentScene !== 'GAMEPLAY') return;
+    this.playSfx('click');
+    const modal = document.getElementById('pause-modal');
+    if (this.isRunning) {
+      this.pause();
+      modal?.classList.remove('hidden');
+    } else {
+      this.resumeFromPause();
+    }
+  }
+
+  private resumeFromPause(): void {
+    this.playSfx('click');
+    document.getElementById('pause-modal')?.classList.add('hidden');
+    this.start();
+  }
+
+  private exitToMainMenu(): void {
+    this.playSfx('click');
+    document.getElementById('pause-modal')?.classList.add('hidden');
+    this.pause();
+    this.showScene('MENU');
   }
 
   private startGameplayLoop(): void {
